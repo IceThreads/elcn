@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>下载页面</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #1f2733;
+    background-color: #f4f7fc;
+    background-image:
+      radial-gradient(circle at 18% 0%, #dfe9ff 0%, rgba(223,233,255,0) 55%),
+      radial-gradient(circle at 88% 100%, #e2f7ef 0%, rgba(226,247,239,0) 55%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ 左上角文件名 ============ */
+  .topbar {
+    position: absolute;
+    top: 0; left: 0;
+    padding: 22px 26px;
+    max-width: 100%;
+    z-index: 10;
+  }
+
+  .filename {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    max-width: min(68vw, 440px);
+    padding: 8px 15px 8px 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #3d4757;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(31, 39, 51, 0.07);
+    border-radius: 999px;
+    box-shadow: 0 4px 14px -8px rgba(31, 39, 51, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .filename::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  }
+
+  .filename span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* ============ 居中主体 ============ */
+  .stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 110px 24px 70px;
+    text-align: center;
+  }
+
+  /* ---- 图标 ---- */
+  .icon-wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .glow {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 240px; height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--glow-color, rgba(37, 99, 235, .32)), transparent 68%);
+    filter: blur(6px);
+    pointer-events: none;
+    transition: background 0.35s ease;
+  }
+
+  #iconHost { position: relative; display: grid; place-items: center; }
+
+  .file-icon {
+    display: block;
+    width: 122px;
+    height: auto;
+    filter: drop-shadow(0 18px 26px rgba(37, 99, 235, 0.28));
+    animation: float 4.5s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-9px); }
+  }
+
+  /* ---- 文件类型 ---- */
+  .file-type {
+    margin-top: 28px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: #1b2534;
+  }
+
+  .file-size {
+    margin-top: 7px;
+    font-size: 13.5px;
+    color: #7b8798;
+    letter-spacing: 0.3px;
+  }
+
+  /* ---- 操作区 ---- */
+  .actions {
+    margin-top: 34px;
+    width: min(580px, 100%);
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+  }
+
+  .picker { flex: 1 1 auto; min-width: 0; text-align: left; }
+
+  .picker-label {
+    display: block;
+    margin: 0 0 7px 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #7b8798;
+  }
+
+  .select-wrap { position: relative; }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 14px 42px 14px 16px;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #1f2733;
+    background: #ffffff;
+    border: 1.5px solid #dde4f0;
+    border-radius: 13px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    box-shadow: 0 2px 8px -6px rgba(31, 39, 51, 0.4);
+  }
+
+  select:hover { border-color: #bccbe4; }
+
+  select:focus,
+  select:focus-visible {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+  }
+
+  .chevron {
+    position: absolute;
+    top: 50%; right: 15px;
+    width: 14px; height: 14px;
+    margin-top: -7px;
+    pointer-events: none;
+    color: #8b96a8;
+  }
+
+  /* ---- 下载按钮 ---- */
+  .download-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-width: 208px;
+    padding: 14px 24px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    color: #ffffff;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    border-radius: 13px;
+    cursor: pointer;
+    box-shadow: 0 12px 24px -10px rgba(37, 99, 235, 0.9);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 28px -10px rgba(37, 99, 235, 0.95);
+  }
+
+  .download-btn:active {
+    transform: translateY(0);
+    filter: brightness(0.94);
+    box-shadow: 0 8px 18px -10px rgba(37, 99, 235, 0.9);
+  }
+
+  .download-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.28),
+                0 12px 24px -10px rgba(37, 99, 235, 0.9);
+  }
+
+  .download-btn.busy {
+    filter: grayscale(0.15) brightness(0.97);
+    pointer-events: none;
+  }
+
+  .download-btn:disabled {
+    background: #c3cddd;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .download-btn svg { flex: 0 0 auto; width: 17px; height: 17px; }
+
+  /* ---- 提示 ---- */
+  .hint {
+    margin-top: 22px;
+    max-width: min(580px, 100%);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #9aa5b5;
+    letter-spacing: 0.3px;
+    word-break: break-all;
+    transition: color 0.2s ease;
+  }
+
+  .hint.warn { color: #e11d48; font-weight: 600; }
+
+  /* ============ 响应式 ============ */
+  @media (max-width: 620px) {
+    .topbar { padding: 16px 18px; }
+    .stage { padding: 92px 20px 48px; }
+    .file-icon { width: 100px; }
+    .glow { width: 190px; height: 190px; }
+    .file-type { font-size: 17px; margin-top: 24px; }
+
+    .actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+    }
+
+    .download-btn {
+      width: 100%;
+      min-width: 0;
+      padding: 15px 22px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .file-icon { animation: none; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- 左上角：文件名称 -->
+  <div class="topbar">
+    <div class="filename" id="filename" title="">
+      <span id="filenameText"></span>
+    </div>
+  </div>
+
+  <!-- 主体 -->
+  <main class="stage">
+    <!-- 文件图标（根据后缀自动生成） -->
+    <div class="icon-wrap">
+      <div class="glow" id="glow"></div>
+      <div id="iconHost"></div>
+    </div>
+
+    <!-- 文件类型 -->
+    <div class="file-type" id="fileType"></div>
+    <div class="file-size" id="fileSize"></div>
+
+    <!-- 下载方式 + 下载按钮 -->
+    <div class="actions">
+      <div class="picker">
+        <label class="picker-label" for="method">下载方式</label>
+        <div class="select-wrap">
+          <select id="method"></select>
+          <svg class="chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <button class="download-btn" id="downloadBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 3v11m0 0l4.2-4.2M12 14l-4.2-4.2" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span id="btnText"></span>
+      </button>
+    </div>
+
+    <p class="hint" id="hint"></p>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =====================================================================
+     ① 配置区：只改这里就行
+     ---------------------------------------------------------------------
+     name   ：文件名（图标、类型、徽章都会跟着后缀自动变化）
+     size   ：显示的文件大小，留空则不显示
+     note   ：跟在大小后面的补充说明，留空则不显示
+     sources：下载节点列表，想加几个就加几个
+              label = 下拉框里显示的名字（按钮文字会变成“从 label 下载”）
+              url   = 该节点的下载地址，留空 '' 表示暂未配置
+     ===================================================================== */
+  var FILE = {
+    name: '铁路调度模拟器_Cmod-v13.1.apk',
+    size: '1351.68 MB',
+    note: '已通过安全扫描',
+    sources: [
+       { label: '第三方服务器',   url: 'https://bh-apk.iddadnn.com/game/202606/06/tlddmnq_315507.apk?tk=eJIoNAIQOEOQMANYIMOEIAOEOALJIoLJIodxZ1c8MUMcYBIweIMQNMOIN0y3jxTsnij3T3j2Tsmijsnij3T4CzjwCmjiGkGuVzT1DuXriii6TxzzTw3=' },
+      { label: '官方服务器',   url: '' },
+      { label: 'CDN 加速节点', url: '' },
+      { label: '国内镜像站点', url: '' },
+      { label: '网盘直链',     url: '' }   // ← 留空就是“暂未配置”
+    ]
+  };
+  /* ===================================================================== */
+
+  /* ---------- 后缀 → 类型 ---------- */
+  var EXT_TYPE = {
+    // 压缩包
+    zip: 'archive', rar: 'archive', '7z': 'archive', tar: 'archive', gz: 'archive',
+    bz2: 'archive', xz: 'archive', tgz: 'archive', iso: 'archive',
+    // 文档
+    pdf: 'pdf',
+    doc: 'word', docx: 'word', rtf: 'word', odt: 'word', pages: 'word',
+    xls: 'excel', xlsx: 'excel', csv: 'excel', ods: 'excel', numbers: 'excel',
+    ppt: 'ppt', pptx: 'ppt', odp: 'ppt', key: 'ppt',
+    // 图片
+    png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image',
+    svg: 'image', bmp: 'image', ico: 'image', avif: 'image', tif: 'image', tiff: 'image',
+    // 视频
+    mp4: 'video', mov: 'video', avi: 'video', mkv: 'video', webm: 'video',
+    flv: 'video', m4v: 'video', wmv: 'video', rmvb: 'video',
+    // 音频
+    mp3: 'audio', wav: 'audio', flac: 'audio', aac: 'audio', ogg: 'audio',
+    m4a: 'audio', wma: 'audio', aiff: 'audio',
+    // 文本 / 代码
+    txt: 'text', md: 'text', json: 'text', xml: 'text', html: 'text', htm: 'text',
+    css: 'text', js: 'text', ts: 'text', jsx: 'text', tsx: 'text', py: 'text',
+    java: 'text', c: 'text', cpp: 'text', h: 'text', go: 'text', rs: 'text',
+    php: 'text', rb: 'text', sh: 'text', yml: 'text', yaml: 'text', log: 'text',
+    ini: 'text', conf: 'text', sql: 'text',
+    // 程序 / 安装包
+    exe: 'app', msi: 'app', dmg: 'app', apk: 'app', ipa: 'app',
+    deb: 'app', rpm: 'app', appimage: 'app', pkg: 'app'
+  };
+
+  /* ---------- 各类型配色 ---------- */
+  var THEMES = {
+    archive: { from: '#60a5fa', to: '#2563eb', glow: 'rgba(37, 99, 235, .32)' },
+    pdf:     { from: '#fb7185', to: '#dc2626', glow: 'rgba(220, 38, 38, .30)' },
+    word:    { from: '#60a5fa', to: '#1d4ed8', glow: 'rgba(29, 78, 216, .30)' },
+    excel:   { from: '#34d399', to: '#059669', glow: 'rgba(5, 150, 105, .30)' },
+    ppt:     { from: '#fbbf24', to: '#ea580c', glow: 'rgba(234, 88, 12, .30)' },
+    image:   { from: '#a78bfa', to: '#7c3aed', glow: 'rgba(124, 58, 237, .30)' },
+    video:   { from: '#fb7185', to: '#e11d48', glow: 'rgba(225, 29, 72, .30)' },
+    audio:   { from: '#22d3ee', to: '#0891b2', glow: 'rgba(8, 145, 178, .30)' },
+    text:    { from: '#94a3b8', to: '#475569', glow: 'rgba(71, 85, 105, .28)' },
+    app:     { from: '#fbbf24', to: '#d97706', glow: 'rgba(217, 119, 6, .30)' },
+    file:    { from: '#a3b1c6', to: '#64748b', glow: 'rgba(100, 116, 139, .28)' }
+  };
+
+  var TYPE_LABEL = {
+    archive: '压缩文件', pdf: 'PDF 文档', word: 'Word 文档', excel: 'Excel 表格',
+    ppt: 'PPT 演示文稿', image: '图片', video: '视频', audio: '音频',
+    text: '文本文件', app: '安装程序', file: '文件'
+  };
+
+  /* ---------- 工具函数 ---------- */
+  function getExt(name) {
+    var i = name.lastIndexOf('.');
+    if (i < 0 || i === name.length - 1) return '';
+    return name.slice(i + 1).toLowerCase();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ---------- 按后缀生成 SVG 图标 ---------- */
+  var iconUid = 0;
+
+  function buildIconSVG(fileName) {
+    var ext  = getExt(fileName);
+    var type = EXT_TYPE[ext] || 'file';
+    var t    = THEMES[type] || THEMES.file;
+    var id   = 'grad' + (++iconUid);
+    var inner = '';
+
+    if (type === 'image') {
+      // 图片：太阳 + 山峰
+      inner =
+        '<circle cx="42" cy="63" r="9" fill="#fff" opacity=".58"/>' +
+        '<path d="M18 98 L42 68 L58 88 L72 74 L94 98 Z" fill="#fff" opacity=".45"/>';
+    } else if (type === 'video') {
+      // 视频：播放键
+      inner =
+        '<circle cx="56" cy="76" r="21" fill="#fff" opacity=".26"/>' +
+        '<path d="M50 65 L70 76 L50 87 Z" fill="#fff" opacity=".92"/>';
+    } else if (type === 'audio') {
+      // 音频：波形
+      inner =
+        '<rect x="26" y="70" width="6" height="22" rx="3" fill="#fff" opacity=".50"/>' +
+        '<rect x="38" y="58" width="6" height="46" rx="3" fill="#fff" opacity=".65"/>' +
+        '<rect x="50" y="48" width="6" height="66" rx="3" fill="#fff" opacity=".88"/>' +
+        '<rect x="62" y="60" width="6" height="42" rx="3" fill="#fff" opacity=".65"/>' +
+        '<rect x="74" y="72" width="6" height="18" rx="3" fill="#fff" opacity=".50"/>';
+    } else {
+      // 文档类：内容线条 + 扩展名徽章
+      inner =
+        '<rect x="24" y="54" width="54" height="7" rx="3.5" fill="#fff" opacity=".55"/>' +
+        '<rect x="24" y="70" width="64" height="7" rx="3.5" fill="#fff" opacity=".40"/>';
+
+      if (ext) {
+        var badge = ext.toUpperCase().slice(0, 4);
+        var w = Math.max(38, 16 + badge.length * 8.5);
+        var x = 56 - w / 2;
+        inner +=
+          '<rect x="' + x.toFixed(1) + '" y="92" width="' + w.toFixed(1) +
+          '" height="24" rx="7" fill="#fff" opacity=".95"/>' +
+          '<text x="56" y="109" text-anchor="middle" ' +
+          'font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" ' +
+          'font-size="12" font-weight="800" fill="' + t.to + '">' +
+          escapeHtml(badge) + '</text>';
+      }
+    }
+
+    return '<svg class="file-icon" viewBox="0 0 112 148" fill="none" ' +
+           'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+             '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1">' +
+               '<stop offset="0%" stop-color="' + t.from + '"/>' +
+               '<stop offset="100%" stop-color="' + t.to + '"/>' +
+             '</linearGradient></defs>' +
+             '<path d="M14 4 H76 L106 34 V136 a8 8 0 0 1 -8 8 H14 a8 8 0 0 1 -8 -8 V12 a8 8 0 0 1 8 -8 Z" ' +
+                   'fill="url(#' + id + ')"/>' +
+             '<path d="M76 4 L106 34 H82 a6 6 0 0 1 -6 -6 Z" fill="#fff" fill-opacity=".42"/>' +
+             inner +
+           '</svg>';
+  }
+
+  /* ---------- DOM ---------- */
+  var els = {
+    filename: document.getElementById('filename'),
+    filenameText: document.getElementById('filenameText'),
+    iconHost: document.getElementById('iconHost'),
+    glow: document.getElementById('glow'),
+    fileType: document.getElementById('fileType'),
+    fileSize: document.getElementById('fileSize'),
+    select: document.getElementById('method'),
+    btn: document.getElementById('downloadBtn'),
+    btnText: document.getElementById('btnText'),
+    hint: document.getElementById('hint')
+  };
+
+  var hintTimer = null;
+
+  function currentSource() {
+    return FILE.sources[els.select.selectedIndex] || null;
+  }
+
+  function setBtnText(text) {
+    els.btnText.textContent = text;
+  }
+
+  function syncUI() {
+    var src = currentSource();
+
+    if (!src) {
+      setBtnText('暂无可用下载方式');
+      els.btn.disabled = true;
+      els.hint.textContent = '';
+      return;
+    }
+
+    els.btn.disabled = false;
+    setBtnText('从 ' + src.label + ' 下载');
+
+    if (src.url) {
+      els.hint.classList.remove('warn');
+      els.hint.textContent = '目标地址：' + src.url;
+    } else {
+      els.hint.textContent = '「' + src.label + '」暂未配置下载链接';
+    }
+  }
+
+  function flash(msg) {
+    clearTimeout(hintTimer);
+    els.hint.textContent = msg;
+    els.hint.classList.add('warn');
+    hintTimer = setTimeout(function () {
+      els.hint.classList.remove('warn');
+      syncUI();
+    }, 1900);
+  }
+
+  /* ---------- 初始化渲染 ---------- */
+  function render() {
+    var ext  = getExt(FILE.name);
+    var type = EXT_TYPE[ext] || 'file';
+    var theme = THEMES[type] || THEMES.file;
+
+    // 顶部文件名 + 页面标题
+    els.filenameText.textContent = FILE.name;
+    els.filename.title = FILE.name;
+    document.title = FILE.name + ' · 下载';
+
+    // 图标（按后缀自动判断）
+    els.iconHost.innerHTML = buildIconSVG(FILE.name);
+    els.glow.style.setProperty('--glow-color', theme.glow);
+
+    // 文件类型
+    els.fileType.textContent =
+      (ext ? ext.toUpperCase() + ' ' : '') + (TYPE_LABEL[type] || TYPE_LABEL.file);
+
+    // 文件大小
+    var sizeText = [FILE.size, FILE.note].filter(Boolean).join(' · ');
+    els.fileSize.textContent = sizeText;
+    els.fileSize.style.display = sizeText ? '' : 'none';
+
+    // 下载方式下拉框
+    if (!FILE.sources.length) {
+      els.select.innerHTML = '<option>暂无下载方式</option>';
+    } else {
+      els.select.innerHTML = FILE.sources.map(function (s, i) {
+        return '<option value="' + i + '">' + escapeHtml(s.label) + '</option>';
+      }).join('');
+    }
+
+    syncUI();
+  }
+
+  /* ---------- 事件 ---------- */
+  els.select.addEventListener('change', syncUI);
+
+  els.btn.addEventListener('click', function () {
+    if (els.btn.classList.contains('busy')) return;
+
+    var src = currentSource();
+    if (!src) { flash('暂无可用下载方式'); return; }
+    if (!src.url) { flash('「' + src.label + '」暂未配置下载链接'); return; }
+
+    // 状态反馈
+    els.btn.classList.add('busy');
+    setBtnText('正在连接' + src.label + '…');
+    setTimeout(function () { setBtnText('开始下载…'); }, 600);
+
+    // 触发下载（替换/补充为你的真实下载逻辑即可）
+    var a = document.createElement('a');
+    a.href = src.url;
+    a.download = FILE.name;
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(function () {
+      els.btn.classList.remove('busy');
+      syncUI();
+    }, 1600);
+  });
+
+  /* 启动 */
+  render();
+})();
+</script>
+</body>
+</html>
