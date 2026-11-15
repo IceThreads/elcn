@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>声明</title>
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body {
+    -webkit-user-select: none; -moz-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+  }
+  body {
+    font-family: "Songti SC", SimSun, "Microsoft YaHei", serif;
+    color: #000; background: #fff;
+    max-width: 720px; margin: 64px auto; padding: 0 24px;
+    line-height: 1.9; font-size: 17px;
+  }
+  h1 {
+    font-size: 22px; font-weight: normal; text-align: center;
+    letter-spacing: 6px; margin: 0 0 40px;
+  }
+  p { margin: 0 0 16px; text-indent: 2em; text-align: justify; }
+  .sign { margin-top: 64px; text-align: right; }
+  .sign img {
+    display: block; max-width: 200px; max-height: 90px;
+    margin: 0 0 10px auto;
+    -webkit-user-drag: none; pointer-events: none;
+  }
+  .date { text-align: right; }
+
+  /* ===== 水印层 ===== */
+  #wm {
+    position: fixed; inset: 0; overflow: hidden;
+    pointer-events: none; z-index: 2147483647;
+    user-select: none;
+  }
+  #wmInner {
+    position: absolute; left: -50%; top: -50%;
+    width: 200%; height: 200%;
+    transform: rotate(-22deg);
+    display: grid; align-content: start;
+  }
+  #wmInner .cell {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+    font-size: 11px; line-height: 1.7;
+    color: rgba(0, 0, 0, 0.12);
+    white-space: nowrap; letter-spacing: 0.4px;
+  }
+  #wmInner .cell .tm { font-weight: 700; color: rgba(0, 0, 0, 0.17); }
+
+  /* ===== 拦截遮罩 ===== */
+  #shield {
+    position: fixed; inset: 0; z-index: 2147483646;
+    display: none; align-items: center; justify-content: center;
+    background: #fff; color: #c00;
+    font-family: "Microsoft YaHei", sans-serif;
+    font-size: 16px; letter-spacing: 1px;
+    text-align: center; padding: 0 24px;
+  }
+  #shield.on { display: flex; }
+
+  @media print {
+    html, body { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <h1>声 明</h1>
+
+  <p>于 2026年11月16日 至 2026年11月27日 本人现就拍摄期间的相关事项郑重声明如下：</p>
+
+  <p>一、在拍摄过程中，本人不拍摄正常自然人的单人正脸照片。本人充分尊重每一位自然人的肖像权与人格尊严，避免以单人正脸为主要内容进行拍摄，不刻意捕捉、记录或留存正常自然人的正面面部特征。</p>
+
+  <p>二、本人承诺，未经相关权利人许可，不将拍摄内容发布至网络。前述“发布至网络”包括但不限于上传至社交平台、短视频平台、论坛、网站、云盘分享或其他任何可使公众获取的渠道；亦不将相关内容用于商业宣传、展示、传播或其他超出拍摄目的的用途。</p>
+
+  <p>三、如因拍摄或后续保管、使用不当造成他人权益受损，本人愿承担相应责任，并积极配合处理。本声明为本人真实意思表示，自签署之日起生效。</p>
+
+  <div class="sign">
+    <img src="/elcn/gbm.jpg" alt="签名">
+    <div class="date">日期：<span id="today"></span></div>
+  </div>
+
+  <div id="wm" aria-hidden="true"><div id="wmInner"></div></div>
+  <div id="shield" aria-hidden="true"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 访问者信息 ---------- */
+  var UA = navigator.userAgent;
+  var SESSION_START = new Date();
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmt(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+           ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+
+  function getBrowser() {
+    var m;
+    if ((m = UA.match(/MicroMessenger\/([\d.]+)/))) return '微信 ' + m[1].split('.')[0];
+    if ((m = UA.match(/Edg\/([\d.]+)/)))         return 'Edge ' + m[1].split('.')[0];
+    if ((m = UA.match(/OPR\/([\d.]+)/)))         return 'Opera ' + m[1].split('.')[0];
+    if ((m = UA.match(/Firefox\/([\d.]+)/)))     return 'Firefox ' + m[1].split('.')[0];
+    if ((m = UA.match(/Chrome\/([\d.]+)/)))      return 'Chrome ' + m[1].split('.')[0];
+    if ((m = UA.match(/Version\/([\d.]+).*Safari/))) return 'Safari ' + m[1].split('.')[0];
+    return '未知浏览器';
+  }
+  function getOS() {
+    var m;
+    if (/Windows NT 10/.test(UA))   return 'Windows 10/11';
+    if (/Windows NT 6\.3/.test(UA)) return 'Windows 8.1';
+    if (/Windows NT 6\.1/.test(UA)) return 'Windows 7';
+    if ((m = UA.match(/Android ([\d.]+)/))) return 'Android ' + m[1];
+    if (/(iPhone|iPad|iPod)/.test(UA)) {
+      m = UA.match(/OS (\d+)[._](\d+)/);
+      return 'iOS ' + (m ? m[1] + '.' + m[2] : '');
+    }
+    if ((m = UA.match(/Mac OS X ([\d_]+)/))) return 'macOS ' + m[1].replace(/_/g, '.');
+    if (/Linux/.test(UA)) return 'Linux';
+    return '未知系统';
+  }
+
+  var SCREEN = screen.width + '×' + screen.height +
+               (window.devicePixelRatio > 1 ? '@' + window.devicePixelRatio + 'x' : '');
+  var IP = '';
+
+  function getIP() {
+    var apis = ['https://api.ipify.org?format=json', 'https://ipapi.co/json/'];
+    var i = 0;
+    (function next() {
+      if (i >= apis.length) return;
+      var url = apis[i++];
+      var ctrl = window.AbortController ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 4000);
+      fetch(url, ctrl ? { signal: ctrl.signal } : {})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          IP = d.ip || d.query || '';
+          if (IP) refreshInfoNodes(); else next();
+        })
+        .catch(next)
+        .then(function () { clearTimeout(timer); });
+    })();
+  }
+
+  function infoText() {
+    return getBrowser() + ' · ' + getOS() + ' · ' + SCREEN +
+           (IP ? ' · IP ' + IP : '') +
+           ' · 会话 ' + fmt(SESSION_START).slice(11);
+  }
+
+  /* ---------- 水印 ---------- */
+  var wm = document.getElementById('wm');
+  var wmInner = document.getElementById('wmInner');
+  var timeNodes = [], infoNodes = [];
+
+  function refreshInfoNodes() {
+    var s = infoText();
+    for (var i = 0; i < infoNodes.length; i++) infoNodes[i].nodeValue = s;
+  }
+
+  function build() {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var mobile = vw < 640;
+    var tw = mobile ? 300 : 400;
+    var th = mobile ? 150 : 170;
+    var W = vw * 2, H = vh * 2;
+    var cols = Math.ceil(W / tw);
+    var rows = Math.ceil(H / th);
+
+    wmInner.style.gridTemplateColumns = 'repeat(' + cols + ',' + tw + 'px)';
+    wmInner.style.gridAutoRows = th + 'px';
+
+    var frag = document.createDocumentFragment();
+    timeNodes = []; infoNodes = [];
+
+    for (var i = 0; i < cols * rows; i++) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+
+      var tm = document.createElement('span');
+      tm.className = 'tm';
+      var tn = document.createTextNode(fmt(new Date()));
+      tm.appendChild(tn);
+
+      var inf = document.createElement('span');
+      var ifn = document.createTextNode(infoText());
+      inf.appendChild(ifn);
+
+      cell.appendChild(tm);
+      cell.appendChild(inf);
+      frag.appendChild(cell);
+      timeNodes.push(tn);
+      infoNodes.push(ifn);
+    }
+
+    wmInner.innerHTML = '';
+    wmInner.appendChild(frag);
+
+    var today = document.getElementById('today');
+    if (today) {
+      var d = new Date();
+      today.textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    }
+  }
+
+  setInterval(function () {
+    var s = fmt(new Date());
+    for (var i = 0; i < timeNodes.length; i++) timeNodes[i].nodeValue = s;
+  }, 1000);
+
+  var rt;
+  window.addEventListener('resize', function () {
+    clearTimeout(rt);
+    rt = setTimeout(build, 300);
+  });
+
+  /* ---------- 拦截 ---------- */
+  var shield = document.getElementById('shield');
+  var shieldTimer = null;
+
+  function flash(msg) {
+    if (!shield) return;
+    shield.textContent = msg;
+    shield.classList.add('on');
+    clearTimeout(shieldTimer);
+    shieldTimer = setTimeout(function () { shield.classList.remove('on'); }, 1400);
+  }
+
+  ['contextmenu', 'dragstart', 'selectstart', 'copy', 'cut'].forEach(function (t) {
+    document.addEventListener(t, function (e) { e.preventDefault(); }, true);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var k = (e.key || '').toLowerCase();
+    if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+      flash('⚠ 检测到截屏操作');
+      overwriteClipboard();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) &&
+        (k === 'p' || k === 's' || k === 'u' || k === 'c' || k === 'a')) {
+      e.preventDefault(); e.stopPropagation();
+      if (k === 'p' || k === 's') flash('本页面禁止打印 / 保存');
+    }
+  }, true);
+
+  document.addEventListener('keyup', function (e) {
+    if (e.key === 'PrintScreen' || e.code === 'PrintScreen') overwriteClipboard();
+  }, true);
+
+  function overwriteClipboard() {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText('【本页面内容受保护，禁止截屏传播】').catch(function () {});
+      }
+    } catch (err) {}
+  }
+
+  window.addEventListener('beforeprint', function () {
+    document.documentElement.style.visibility = 'hidden';
+  });
+  window.addEventListener('afterprint', function () {
+    document.documentElement.style.visibility = '';
+  });
+
+  new MutationObserver(function () {
+    if (!document.body.contains(wm)) document.body.appendChild(wm);
+  }).observe(document.body, { childList: true });
+
+  /* ---------- 启动 ---------- */
+  build();
+  getIP();
+
+})();
+</script>
+
+</body>
+</html>
